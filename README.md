@@ -1,13 +1,10 @@
-# Stap 1 – Functionele specificaties  
-**DIY USB-MIDI PSG-synth (SN76489 + ESP32-C2)**
-
-# SN76489 USB-MIDI Synth (ESP32-C2)
-
 Educatieve DIY USB-MIDI synthesizer gebaseerd op de SN76489 PSG,
 aangestuurd via een ESP32-C2 met CircuitPython en een PCF8574
 (I2C → parallel).
 
 <img src="./img/SN76489 synth midi.jpg" width="40%" height="40%">
+
+# Functionele specificaties  
 
 ## Ontwerpfilosofie
 - Eerst breadboard, dan PCB
