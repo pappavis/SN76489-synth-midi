@@ -7,6 +7,8 @@ Educatieve DIY USB-MIDI synthesizer gebaseerd op de SN76489 PSG,
 aangestuurd via een ESP32-C2 met CircuitPython en een PCF8574
 (I2C → parallel).
 
+<img src="./img/SN76489 synth midi.jpg" width="40%" height="40%">
+
 ## Ontwerpfilosofie
 - Eerst breadboard, dan PCB
 - Alles meetbaar met scope en multimeter
@@ -56,3 +58,16 @@ sn76489-midi-synth/
     ├── photos/
     └── scope-captures/
 
+# Werk-in-uitvoering
+
+## Functioneel schema
+<img src="./img/SN76489 synth midi_schematics.jpg">
+
+## Printplaat klaar voor China-produtie
+<img src="./img/SN76489 synth midi_pcb.jpg">
+
+# CREDITS
+In een opwelling gemaakt op een koude Zaterdagmiddag.
+
+<img src="./img/Easylab4Kids_logo.jpeg">
+Michiel Erasmus
