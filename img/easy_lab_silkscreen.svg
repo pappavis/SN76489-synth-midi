@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- KiCad Silkscreen Friendly Line-Art -->
+  <!-- Colors are visual only; KiCad will ignore them per layer -->
+
+  <!-- OUTER RING -->
+  <circle cx="50" cy="50" r="46"
+          fill="none"
+          stroke="#2BB673"
+          stroke-width="2"/>
+
+  <!-- MIDDLE RING -->
+  <circle cx="50" cy="50" r="42"
+          fill="none"
+          stroke="#2DA9E1"
+          stroke-width="2"/>
+
+  <!-- INNER RING -->
+  <circle cx="50" cy="50" r="38"
+          fill="none"
+          stroke="#2BB673"
+          stroke-width="1"/>
+
+  <!-- TEXT: EASY -->
+  <path d="
+    M30 40 H44
+    M30 40 V48 H42
+    M30 48 V56 H44
+    M52 40 H66
+    M52 40 V56
+    M52 48 H64
+    M72 40 H86
+    M86 40 V48 H74
+    M74 48 V56 H86
+  "
+  fill="none"
+  stroke="#2DA9E1"
+  stroke-width="1.8"
+  stroke-linecap="round"
+  stroke-linejoin="round"/>
+
+  <!-- TEXT: LAB -->
+  <path d="
+    M32 62 V78 H44
+    M52 62 V78
+    M52 62 H64
+    M64 62 V78
+    M72 62 V78 H86
+    M72 78 H86
+  "
+  fill="none"
+  stroke="#2DA9E1"
+  stroke-width="1.8"
+  stroke-linecap="round"
+  stroke-linejoin="round"/>
+</svg>
+
