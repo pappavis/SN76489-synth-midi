@@ -450,7 +450,7 @@
     "pinned_symbol_libs": []
   },
   "meta": {
-    "filename": "SN76489 synth midi.kicad_pro",
+    "filename": "SN76489 synth midi v2.01.kicad_pro",
     "version": 3
   },
   "net_settings": {
@@ -485,7 +485,7 @@
     "last_paths": {
       "gencad": "",
       "idf": "",
-      "netlist": "",
+      "netlist": "SN76489 synth midi.net",
       "plot": "",
       "pos_files": "",
       "specctra_dsn": "",
@@ -595,7 +595,15 @@
     "meta": {
       "version": 1
     },
-    "net_format_name": "",
+    "net_format_name": "KiCad",
+    "ngspice": {
+      "fix_include_paths": true,
+      "meta": {
+        "version": 0
+      },
+      "model_mode": 4,
+      "workbook_filename": ""
+    },
     "page_layout_descr_file": "",
     "plot_directory": "",
     "space_save_all_events": true,
