@@ -2,261 +2,287 @@
 ## SN76489 PSG Emulasie in Python (MacOS)
 
 **Datum:** 2 Februarie 2026  
-**Status:** FS v1.6 (verfyn ná goedgekeurde v0.04)  
+**Status:** FS v1.6 (verfyn ná goedgekeurde v0.04 + v0.05)  
 **Doelplatform:** MacOS 26.2  
 **Python:** 3.12  
-**Huidige stabiele weergawe:** v0.04 ✅  
+**Huidige status:** v0.05 stabiel ✅  
+- Multi-chip (1–128)  
+- Stereo routing (left/right/both)  
+- Mixer + gain model  
+- CLI: `--chips`, `--pan`, `--master-gain`, `--block-frames`  
+- Debug: `--dump-regs`, `--counters`, `--debug` (rate-limited)  
+- v0.05: polyfonie + ADSR-lite + pitch bend + `--test chords` + `--test sweep`
 
 ---
 
 ## 0. Konteks & Status
 
-SN76489 Emulator v0.04 is **stabiel en goedgekeur** met:
+SN76489 Emulator is ’n **register-gedrewe** PSG engine/emulator in Python, gebou as ’n iteratiewe reeks milestones.
 
-- Volledige SN76489 register-gedrewe emulasie
-- Multi-chip engine (1–128 chips)
-- Stereo routing (left / right / both)
-- Mixer + master gain model
-- Deterministiese noise (rate + seed)
-- Envelope engine (attack/decay via volume-writes)
-- CoreMIDI input (MacOS)
-- Streng sanity checks + rollbackstrategie
-- Alles in **één Python-bestand**
-
-v0.05 fokus nou op **muzikaliteit & speelbaarheid**.
+Belangrikste reël:
+- Alle klank ontstaan uitsluitlik via **SN76489 register writes**.
+- Geen direkte DSP sine generators as “shortcut” vir tone nie.
 
 ---
 
-## 1. Doel (v1.6)
+## 1. Doel
 
-Bou SN76489 verder uit van ’n tegnies-korrekte emulator na ’n **speelbare musikale engine**, geskik vir:
+Bou ’n **SN76489 PSG emulasie/engine** in Python wat:
 
-- Live MIDI speel
-- Akkoorde en melodieë
-- Minder artefakte (clicks, abrupt mutes)
-- Mensliker klank binne SN76489-beperkings
-
-**Belangrik:**  
-Alle klank bly **register-gedrewe**. Geen direkte DSP of shortcuts.
+- Op MacOS loop
+- Live audio na computer speakers uitstuur
+- As ’n speelbare instrument kan optree (tests, sequencing, MIDI, later DAW)
+- Multi-chip layering en stereo routing ondersteun
+- Iteratief uitbrei:  
+  **debug → sequencing → multi-chip → file playback (MIDI/VGM) → DAW/MIDI integrasie**
 
 ---
 
 ## 2. Scope
 
-### 2.1 In scope vir v0.05 (Pad A)
+### 2.1 In scope (huidige + volgende iterasies)
 
-- Polyfoniese voice allocation oor tone0 / tone1 / tone2
-- Verbeterde envelope (ADSR-lite)
-- Pitch bend ondersteuning (beperk, SN76489-realistisch)
-- Verbeterde MIDI speelbaarheid
-- Per-chip musikale gedrag
+#### Kern-emulasie
+- 3× tone + 1× noise per chip
+- register latch/data gedrag
+- volume, noise modes, mixing
+- mono per chip → stereo via routing
 
-### 2.2 Uitdruklik buite scope vir v0.05
+#### Engine / platform
+- Multi-chip bank (1–128)
+- Stereo routing: left/right/both
+- Mixer + gain model
+- Buffer rendering
 
-- VST/AU plugin
-- Sample-accurate MIDI scheduling
-- Effects (reverb, delay, filters)
-- Grafiese UI
+#### Runtime modes / CLI
+- Tests:
+  - `--test beep`
+  - `--test noise`
+  - `--test sequence`
+  - `--test chords`
+  - `--test sweep`
+- Debug/inspectie:
+  - `--dump-regs`
+  - `--counters`
+  - `--debug` (rate-limited)
 
----
-
-## 3. Runtime modes / CLI (NUUT, eksplisiet)
-
-Die engine moet steeds **CLI-first** bly vir toetsbaarheid, regressie en Copilot-validasie.
-
-### 3.1 Test modes
-
-- `--test beep`  
-  Basiese audio sanity test (tone0, vaste frekwensie)
-
-- `--test noise`  
-  Noise kanaal toets (white / periodic, rate, seed)
-
-- `--test sequence`  
-  Speel ’n vaste note-reeks (melodie / arpeggio)
-
-- `--test chords` (opsioneel)  
-  Speel ’n akkoord:
-  - tone0 = grondnoot
-  - tone1 = terts
-  - tone2 = kwint  
-  Toets polyfonie en mixing
-
-- `--test sweep` (opsioneel)  
-  Pitch sweep op een tone-kanaal  
-  Toets period update stabiliteit
+#### File playback (NUUT: v0.06 kandidaat)
+- VGM file playback (SN76489 writes + delays)
+- App-config base path vir VGM biblioteek
+- CLI: spesifieke VGM file path speel onmiddellik
 
 ---
 
-### 3.2 Debug & Inspectie modes
+### 2.2 Out of scope (vir nou)
+- VST/AU plugin (native DAW plugin)
+- Cycle-perfect timing
+- Effects (reverb/filter)
+- Multi-file refactor (nog uitgestel)
 
-- `--dump-regs`  
-  Toon:
-  - alle SN76489 registers
-  - afgeleide state (frekwensies, noise mode)
-  - voice allocation (v0.05)
+---
 
-- `--counters`  
-  Toon:
+## 3. Gebruikersverhaal (User Story)
+
+> “Ek wil SN76489 as ’n engine hê wat eers in CLI tests stabiel is,  
+> en dan kan uitbrei na file playback (VGM), en na DAW/MIDI gebruik as ’n virtuele instrument.”
+
+---
+
+## 4. Funksionele Vereistes
+
+### 4.1 SN76489 Core
+- Tone: 3 kanale, 10-bit period, 4-bit volume
+- Noise: white/periodic, rate select, volume
+- Register writes:
+  - latch/data bytes
+  - tone period updates
+  - noise ctrl updates
+  - volume updates
+- Output:
+  - mono PCM per chip
+
+### 4.2 Multi-chip Engine
+- Tot 128 onafhanklike chips
+- Per chip: eie registers/state/counters
+- Mixer: lineêr O(N)
+- Per-chip gain + master gain
+
+### 4.3 Stereo Routing
+- Per chip of default global routing:
+  - left / right / both
+- Dual-mono (both) stuur selfde mono na L+R
+
+### 4.4 Debug & Inspectie
+- `--dump-regs` bly “golden output” format (stabiel vir regression)
+- `--counters` toon per-chip en totaal stats
+
+---
+
+## 5. Test- en Run Modi (belangrik)
+
+Die program moet verskillende run modes hê via CLI-argumente.
+
+### 5.1 Beep Test
+- `--test beep`
+- Speel ’n vaste toon (bv. 440 Hz)
+- Doel: audio path + tone register writes
+
+### 5.2 Noise Test
+- `--test noise`
+- Toets white/periodic + rate/seed
+- Doel: LFSR gedrag + determinisme
+
+### 5.3 Mini Sequencer
+- `--test sequence`
+- Speel ’n vaste reeks note (bv. C–E–G–C)
+- Doel: melodiese playback basis
+
+### 5.4 Chords Test
+- `--test chords`
+- Speel 3 note gelyk (tone0/tone1/tone2)
+- Doel: multi-channel mixing + clipping detection
+
+### 5.5 Sweep Test
+- `--test sweep`
+- Pitch sweep (bv. 220→880 Hz)
+- Doel: period write stabiliteit
+
+---
+
+## 6. Debug & Inspectie Modi
+
+### 6.1 Register Dump
+- CLI: `--dump-regs`
+- Toon:
+  - alle 8 SN76489 registers
+  - latched register
+  - afgeleide state (tone periods/freqs, volumes)
+  - (v0.05+) voice allocation + envelope states
+
+### 6.2 Debug Counters
+- CLI: `--counters`
+- Toon:
   - register writes
   - render calls
-  - frames gegenereer
+  - audio frames
   - MIDI events
   - envelope steps
-
-- `--debug` (rate-limited)  
-  Mens-leesbare debug output vir:
-  - MIDI events
-  - voice allocation
-  - envelope transitions
+  - (later) VGM commands processed + wait ticks
 
 ---
 
-## 4. Gebruikersverhaal (v0.05)
+## 7. Kwaliteit-verbeterings
 
-> “Ek wil SN76489 kan speel soos ’n instrument:  
-> akkoorde, note met sustain, pitch bends,  
-> sonder clicks en sonder dat ek oor registers hoef te dink.”
+### 7.1 CLI: `--master-gain`
+- Maklike volume trim sonder code edits
+- Voorkom clipping by multi-channel/multi-chip
 
----
+### 7.2 CLI: `--block-frames`
+- Toets stutters vs latency
+- Handig vir VGM playback later
 
-## 5. Hoofdfokus: Pad A — v0.05 Muzikaliteit & Speelbaarheid
+### 7.3 “Golden” debug outputs
+- `--dump-regs` output in vaste format (regression-friendly)
 
-### 5.1 Voice Allocation (polyfonie per chip)
+### 7.4 Seed control vir noise
+- CLI: `--noise-seed 0x4000`
+- Deterministiese tests
 
-**Doel**  
-Gebruik **alle drie tone-kanale** van ’n chip vir akkoorde en polyfonie.
-
-**Vereistes**
-- Elke chip het 3 stemme:
-  - tone0
-  - tone1
-  - tone2
-- MIDI Note On:
-  - kies eerste beskikbare stem
-  - eenvoudige round-robin of first-free algoritme
-- MIDI Note Off:
-  - stem word vrygestel
-- Geen voice stealing in v0.05
+### 7.5 Noise rate control
+- CLI: `--noise-rate {div16,div32,div64,tone2}`
 
 ---
 
-### 5.2 Envelope Uitbreiding (ADSR-lite)
+## 8. Toekomstige Modules (later) — **verfyn**
 
-**Doel**  
-Meer musikale note, minder harde artefakte.
+### 8.1 MIDI-bestand Playback (later)
+- Lees MIDI file met 1 instrument track
+- Note on/off → SN76489 register writes
+- File-based playback (nie realtime)
+- Doel: reproduseer eenvoudige melodieë vanuit MIDI files
 
-**Vereistes**
-- Attack
-- Decay
-- Sustain (NUUT)
-- Release (NUUT)
+### 8.2 VGM Playback (NUUT, v0.06 kandidaat)
+Doel: speel bestaande retro game music (VGM) deur die SN76489 emulator.
 
-**Beperkings**
-- Slegs volume register writes
-- 4-bit volume (0–15)
-- Geen DSP-envelopes
+Funksionele vereistes:
+- Lees VGM file vanaf disk
+- Ondersteun:
+  - SN76489 write commands
+  - wait/delay commands (timing)
+- Playback loop:
+  - parse command → apply register write(s) → render wagtyd → herhaal
+- CLI ondersteuning:
+  - `--vgm-path <absolute_or_relative_path>`
+    - begin onmiddellik met afspeel
+  - `--vgm-base-dir <path>`
+    - default location (app config) waar VGM library woon
 
----
+Default voorbeeld (app-config instelbaar):
+- `/Volumes/data1/Yandex.Disk.localized/michiele/Arduino/PCB Ontwerp/KiCAD/github/SN76489-synth-midi/src/tmp/src/`
 
-### 5.3 Pitch Bend (beperk)
+Belangrik:
+- v0.06 timing mag “audio-rate accurate” wees (nie cycle-perfect nie)
+- Debug counters moet VGM metrics toon (commands, waits)
 
-- MIDI Pitch Bend ondersteuning
-- Beperk reeks (bv. ±2 semitone)
-- Pas tone period aan
-- Geen vibrato of LFO
+### 8.3 SN76489 as DAW Instrument (verfyn MIDI gedeelte)
+Doel: engine kan MIDI ontvang en speel sodat Ableton/Logic MIDI kan stuur na die engine.
 
----
+Vereistes:
+- MIDI input via CoreMIDI (MacOS)
+- MIDI channel → chip mapping
+- Minimum:
+  - Note On/Off
+  - Velocity → volume mapping
+  - Pitch Bend (v0.05)
+  - (opsioneel later) sustain pedal CC64
 
-### 5.4 MIDI Speelbaarheid
-
-Verbeterings bo v0.04:
-- Akkoorde moontlik
-- Sustain hou note
-- Minder “chip clicks”
-- Meer intuïtiewe DAW-respons
-
----
-
-## 6. Debug & Kwaliteit (v0.05)
-
-- Voice allocation sigbaar in `--dump-regs`
-- Envelope state per stem (opsioneel)
-- Counters:
-  - voices_used
-  - env_steps
-- Alle v0.04 sanity checks bly geldig
-
----
-
-## 7. Toekomstige Uitbreidings (Pad B, C, D)
-
-### Pad B — Retro-authenticiteit
-- VGM playback
-- Clock-gedrag verfyning
-- Hardware quirks
-- Golden audio regressie
-
-### Pad C — AI / Copilot Vergelyking
-- Copilot implementeer selfde FS/TS
-- Vergelyk klank, stabiliteit, foute
-- Dokumentasie van AI-faalpatrone
-
-### Pad D — Hardware Brug
-- Python engine as golden reference
-- MIDI/VGM → regte SN76489
-- ESP32 + KiCad
-- Software ↔ hardware validasie
+Uitdruklik nie:
+- AU/VST plugin in hierdie fase
+- Multi-thread timing correction
 
 ---
 
-## 8. Sanity Checks (v0.05)
+## 9. Github (NUUT)
 
-Bestaande v0.04 checks plus:
-- Akkoord test (3 note gelyk)
-- Sustain test
-- Release test
-- Pitch bend stabiliteit
+### 9.1 README vir breë publiek
+Die repo moet ’n README hê wat:
+- verduidelik wat die projek is (SN76489 emulator / engine)
+- hoe om te installeer (pip deps)
+- hoe om tests te run (beep/noise/sequence/chords/sweep)
+- hoe om MIDI te gebruik
+- hoe VGM playback later gaan werk (roadmap)
 
----
+### 9.2 Git commit comment in tegniese specs
+Elke release moet ’n standaard commit message hê (in TS opgeneem).
 
-## 9. Plaas, Refleksie & Cleanup Checklist
+Voorbeeld vir v0.05:
+- `git commit -m "v0.05: polyphonic voices + ADSR-lite + pitch bend; add chords/sweep tests"`
 
-### 9.1 Plaas
-- Commit
-- Tag known-good
-- Geen feature creep
-
-### 9.2 Refleksie
-- Bly ons SN76489-getrou?
-- Maak dit speel lekkerder?
-- Is dit toetsbaar?
-
-### 9.3 Cleanup
-- Alle CLI flags gebruik
-- Geen dooie code
-- Registers bly bron van waarheid
-- Copilot-vriendelik
+Vir v0.06 (VGM fokus) sal ons later ’n soortgelyke “one-liner” definieer.
 
 ---
 
-## 10. Aanvaaringskriteria vir v0.05
+## 10. Aanvaaringskriteria (vir volgende iterasie — v0.06 fokus op VGM)
 
-v0.05 is suksesvol as:
-- Polyfonie oor 3 tone-kanale werk
-- ADSR-lite hoorbaar musikaler is
-- Pitch bend werk sonder glitches
-- MIDI speel voel instrumenteel
-- Geen regressie teen v0.04
+Sukses vir v0.06 as:
+- `--vgm-path` speel ’n VGM file hoorbaar af
+- `--vgm-base-dir` werk as default library location
+- Debug counters toon VGM commands processed + waits
+- Geen regressie: v0.05 tests werk nog
 
 ---
 
-## 11. Vervolgstappe
+## Review / Vervolgkeuses
 
 Kies een:
 
-1. **FS v1.6 verder verfyn**  
-2. **FS v1.6 goedkeur** → Tegniese Spesifikasie (TS v1.4)  
-3. **Eers refleksie / cleanup** (v0.04 → v0.05 checklist)
+1) **FS verfyn**  
+   → “FS pas aan: …”
+
+2) **FS goedkeur**  
+   → Ek skryf **Tegniese Spesifikasie (TS v1.5)** vir v0.06 (VGM playback + CLI + timing model + debug output + sanity checks)
+
+3) Ná TS v1.5  
+   → Ek vra of jy **code v0.06** wil genereer (nog steeds één Python-bestand)
 
 ---
